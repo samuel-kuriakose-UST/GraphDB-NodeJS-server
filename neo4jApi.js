@@ -130,12 +130,19 @@ async function getFilteredNodes(nodeName) {
 }
 
 
+
+module.exports = {
+  createRelationship, getAllNodes, getAllEdges, getFilteredNodes
+  // , getAllNodesAndRelationships
+};
+
+
 /* 
 GET ALL THE NODES AND RELATIONSHIPS FROM DB
-NB: This API is not used currently. To optimize, getAllNodes
+NB: This is a working code. You can use it by adding to export object.This API is not used currently. To optimize, getAllNodes
 and getAllEdges were derived from this API
  */
-async function getAllNodesAndRelationships() {
+/* async function getAllNodesAndRelationships() {
   const session = driver.session();
   try {
     const result = await session.run(
@@ -163,22 +170,9 @@ async function getAllNodesAndRelationships() {
   } finally {
     await session.close();
   }
-}
-
-
-module.exports = {
-  createRelationship, getAllNodes, getAllEdges, getFilteredNodes, getAllNodesAndRelationships
-};
+} */
 
 
 
-
-//UNUSED CODE:
-
-/* 
-GET ALL THE NODES AND RELATIONSHIPS FROM DB
-NB: This API is not used currently. To optimize, getAllNodes
-and getAllEdges were derived from this API
- */
 
 

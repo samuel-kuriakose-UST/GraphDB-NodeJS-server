@@ -32,7 +32,7 @@ app.get('/api/edges', async (req, res) => {
 
 });
 
-    
+
 app.get('/api/filteredNodes/:name', async (req, res) => {
     // console.log(`req.body : \n${JSON.stringify(req.body)}\n`)
     const filteredNodes = await neo4jApi.getFilteredNodes(req.params.name);
@@ -48,6 +48,10 @@ app.get('/api/filteredEdges/:name', async (req, res) => {
     const filteredEdges = util.filterSubNodeEdges(allEdges, filteredNodes);
     res.send(filteredEdges);
 })
+
+// app.get('//api/refinedFilteredNodes/:name', async (req,res) => {
+//     const refinedFilteredNodes = await neo4jApi.getrefinedFilteredNodes(re)
+// })
 
 app.get('/api/allData', async (req, res) => {
     // get all nodes and relationships
