@@ -96,19 +96,19 @@ async function getFilteredNodes(nodeName) {
       `MATCH (n)-[*]->(sub)
        WHERE n.name= $nodeName
        RETURN DISTINCT sub
-       `,{nodeName});
+       `, { nodeName });
     // console.log(`Filtered nodes data from Neo4j:\n\n${JSON.stringify(result)}`);
 
     const filteredNodes = result.records.map(record => {
       const node = {};
-      node.label= record.get('sub').properties.name;
+      node.label = record.get('sub').properties.name;
       node.id = record.get('sub').identity.toString();
       return node;
     });
 
-    const idResult= await session.run(
+    const idResult = await session.run(
       `MATCH (n {name: $nodeName}) 
-       RETURN ID(n) as id`,{nodeName});
+       RETURN ID(n) as id`, { nodeName });
 
     const nodeId = idResult.records.map(record => {
       const idData = record.get('id');
@@ -118,21 +118,147 @@ async function getFilteredNodes(nodeName) {
     });
 
 
-    filteredNodes.push({label:nodeName,id:nodeId[0] });
+    filteredNodes.push({ label: nodeName, id: nodeId[0] });
     // console.log(`filteredNodes data from Neo4j:\n\n${JSON.stringify(filteredNodes)}\n`);
     return filteredNodes;
     // return idResult;
-  } catch(error){
+  } catch (error) {
     console.log(error);
   } finally {
     await session.close();
   }
 }
 
+// GET ALL SUBNODES OF GIVEN NODE
+async function getAdvancedFilteredNodes(nodeName) {
+  console.log(`Params.name: ${nodeName}`);
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (n)-[*]->(subs)
+      WHERE n.name = $nodeName AND NOT (n)-[:PEER]->(subs)
+      RETURN DISTINCT subs`
+      , { nodeName });
+    // console.log(`Filtered nodes data from Neo4j:\n\n${JSON.stringify(result)}`);
 
+    const advancedFilteredNodes = result.records.map(record => {
+      const node = {};
+      node.label = record.get('subs').properties.name;
+      node.id = record.get('subs').identity.toString();
+      return node;
+    });
+
+    console.log(`advanced filtered lower nodes:\n ${JSON.stringify(advancedFilteredNodes)}`);
+
+    const idResult = await session.run(
+      `MATCH (n {name: $nodeName}) 
+       RETURN ID(n) as id`, { nodeName });
+
+    const nodeId = idResult.records.map(record => {
+      const idData = record.get('id');
+      // console.log(`\n\nrecord.get('id'): \n${idData}`);
+      const id = idData.low.toString();
+      return id;
+    });
+
+    advancedFilteredNodes.push({ label: nodeName, id: nodeId[0] });
+
+    const higherNodesResult = await session.run(
+      `MATCH (higherNodes)-[r]->(n1 {name:$nodeName})
+      WHERE type(r) <> 'PEER'
+      RETURN higherNodes
+       `, { nodeName });
+    const filteredHigherNodes = higherNodesResult.records.map(record => {
+      const node = {};
+      node.label = record.get('higherNodes').properties.name;
+      node.id = record.get('higherNodes').identity.toString();
+      return node;
+    });
+
+    advancedFilteredNodes.push(filteredHigherNodes[0]);
+
+
+    // console.log(`filteredNodes data from Neo4j:\n\n${JSON.stringify(filteredNodes)}\n`);
+    return advancedFilteredNodes;
+    // return idResult;
+
+
+  } catch (error) {
+    console.log(error);
+  } finally {
+    await session.close();
+  }
+}
+
+async function getImmediateNodes(parentNodeName) {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (n1 {name: $parentNodeName})-[r]->(subs)
+         WHERE type(r) <> 'PEER'
+         RETURN subs`
+      , { parentNodeName });
+      
+      const nodes = [];
+      result.records.forEach(record => {      
+      nodes.push(record.get('subs').properties.name);
+    });
+    return nodes;
+  } finally {
+    await session.close();
+  }
+}
+
+async function getImmediateRelationShips(parentNodeName) {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (n1 {name: $parentNodeName})-[r]->(subs)
+      WHERE type(r) <> 'PEER'
+      RETURN r`
+    ,{parentNodeName});
+    // console.log(`All Edges Data from Neo4J:\n ${JSON.stringify(result)}\n\n`);
+
+    const relationshipNames = [];
+    result.records.forEach(record => {
+      const relationshipRecord = record.get('r');
+      if (relationshipRecord) {
+        relationshipNames.push(relationshipRecord.type.toString());
+      }
+    });
+    return relationshipNames;
+  } finally {
+    await session.close();
+  }
+
+}
+
+async function deleteImmediateRelationships(parentNodeName) {
+  const session = driver.session();
+  try {
+    const result = await session.run(
+      `MATCH (n1 {name: $parentNodeName})-[r]->(subs)
+       WHERE type(r) <> 'PEER'
+       DELETE r`
+      , { parentNodeName });
+
+    console.log(`\nDeleted all relationships associated with ${parentNodeName}`);
+  } finally {
+    await session.close();
+  }
+}
+
+async function remapRelationships(childNodeName, immediateNodes) { //  TO COMPLETE
+  const session = driver.session;
+  immediateNodes.forEach(nodeData =>{
+
+  })
+
+}
 
 module.exports = {
-  createRelationship, getAllNodes, getAllEdges, getFilteredNodes
+  createRelationship, getAllNodes, getAllEdges, getFilteredNodes, getAdvancedFilteredNodes,
+  getImmediateNodes, deleteImmediateRelationships, remapRelationships, getImmediateRelationShips
   // , getAllNodesAndRelationships
 };
 

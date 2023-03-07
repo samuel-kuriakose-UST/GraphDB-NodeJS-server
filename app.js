@@ -37,9 +37,8 @@ app.get('/api/filteredNodes/:name', async (req, res) => {
     // console.log(`req.body : \n${JSON.stringify(req.body)}\n`)
     const filteredNodes = await neo4jApi.getFilteredNodes(req.params.name);
     res.send(filteredNodes);
-    // const FilteredNodes = util.edgeRefiner(neo4jData);
-    // res.send(FilteredNodes);
 });
+
 
 
 app.get('/api/filteredEdges/:name', async (req, res) => {
@@ -49,35 +48,60 @@ app.get('/api/filteredEdges/:name', async (req, res) => {
     res.send(filteredEdges);
 })
 
-// app.get('//api/refinedFilteredNodes/:name', async (req,res) => {
-//     const refinedFilteredNodes = await neo4jApi.getrefinedFilteredNodes(re)
-// })
+app.get('/api/advancedFilteredNodes/:name', async (req, res) => {
+    const allEdges = await neo4jApi.getAllEdges();
+    const halfFilteredNodes = await neo4jApi.getAdvancedFilteredNodes(req.params.name);
+    const halfFilteredEdges = util.filterSubNodeEdges(allEdges, halfFilteredNodes);
+    const fullFilteredEdges = util.filterNonPeerEdges(halfFilteredEdges);
+    const fullFilteredNodes = util.filterOutSoloNodes(halfFilteredNodes,fullFilteredEdges);
+   
 
-app.get('/api/allData', async (req, res) => {
-    // get all nodes and relationships
-    const neo4jData = await neo4jApi.getAllNodesAndRelationships();
-    // console.log(typeof neo4jData.nodes);
-    // neo4jData is a JS object
-    // neo4jData.nodes is also a JS object
-    const Node = refiner.nodeRefiner(neo4jData.nodes);
-    const Edge = refiner.edgeRefiner(neo4jData.relationships);
-    // console.log(typeof Node);
-    // console.log(`Node[] array for ngx-graph: ${JSON.stringify(Node)}`);
-    // console.log(`Edge[] array for ngx-graph: ${JSON.stringify(Edge)}`);
-
-    const ngxData = { Node, Edge };
-    // res.json(neo4jData);
-    res.json(ngxData);
-    //     console.log(neo4jData.nodes);
-    //     console.log(neo4jData.relationships);
+    res.send(fullFilteredNodes);
 });
 
+app.get('/api/advancedFilteredEdges/:name', async (req, res) => {
+    const allEdges = await neo4jApi.getAllEdges();
+    const halfFilteredNodes = await neo4jApi.getAdvancedFilteredNodes(req.params.name);
+    const halfFilteredEdges = util.filterSubNodeEdges(allEdges, halfFilteredNodes);
+    const fullFilteredEdges = util.filterNonPeerEdges(halfFilteredEdges);
+    res.send(fullFilteredEdges);
+})
+
+app.post('/api/insertHeirarchy', async(req,res) => {
+    const parentNodeName = req.body.parentNodeName;
+    const childNodeName = req.body.childNodeName;
+    const relationship = req.body.insersionRelationship;
+    const immediateNodeNames = await neo4jApi.getImmediateNodes(parentNodeName);
+    const immediateRelationshipNames = await neo4jApi.getImmediateRelationShips(parentNodeName);
+
+    await neo4jApi.deleteImmediateRelationships(parentNodeName);
+    await neo4jApi.createRelationship(parentNodeName,childNodeName,relationship);
+    for(let i =0;i< immediateNodeNames.length;i++) {
+        await neo4jApi.createRelationship(childNodeName,immediateNodeNames[i],immediateRelationshipNames[i]);
+    }
+    // await neo4jApi.remapRelationships(childNodeName, immediateNodes); // Not used for current logic
+    res.send('OK');
+});
 
 // start the server
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
 });
 
+// INACTIVE APIS
+app.get('/api/allData', async (req, res) => {
+    // get all nodes and relationships
+    const neo4jData = await neo4jApi.getAllNodesAndRelationships();
+    const Node = refiner.nodeRefiner(neo4jData.nodes);
+    const Edge = refiner.edgeRefiner(neo4jData.relationships);
+    const ngxData = { Node, Edge };
+    res.json(ngxData);
+});
+
+
+
+
+//UNUSED CODES
 
 /*
 THE FOLLOWING CODE RETRIVED ONLY EDGES
